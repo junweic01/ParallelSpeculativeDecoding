@@ -4,7 +4,6 @@
 | <a href="https://arxiv.org/pdf/2408.11850"><b>Paper </b></a> | 
 <a href="https://pearl-code.github.io/"><b>Blog</b></a> |
 </p>
----
 
 *News* 🔥
 - [2025/02] We release a new version of PEARL paper. [link](https://arxiv.org/pdf/2408.11850)
