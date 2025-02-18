@@ -6,6 +6,10 @@
 </p>
 ---
 
+*News* 🔥
+- [2025/02] We release a new version of PEARL paper. [link](https://arxiv.org/pdf/2408.11850)
+- [2025/01] PEARL is accepted to ICLR 2025
+
 <center>
     <img style="border-radius: 0.3125em;
     box-shadow: 0 2px 4px 0 rgba(34,36,38,.12),0 2px 10px 0 rgba(34,36,38,.08);" 
@@ -29,7 +33,6 @@
 > - **provably lossless**
 > - **training-free**, and does not need additional memory
 > - &#128293; can be applied to any algorithms based on draft-then-verify framework, such as [EAGLE](https://sites.google.com/view/eagle-llm) and [Medusa](https://sites.google.com/view/medusa-llm)
-> - &#128293; Eliminating the burden of searching the optimal draft length, together with a larger expectation of accepted tokens.
 
 <br>
 
@@ -112,7 +115,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 accelerate launch --num_processes 2 benchmark/eval_
 ## With UI
 We have provided a suggested web interface, which you can use by running the following command. 
 ```shell
-CUDA_VISIBLE_DEVICES=0,1,2,3 accelerate launch --num_processes 2 applications --eval_mode para_sd --gamma 5 -n 1  -e applications --draft_model codellama-7b --target_model codellama-70b --max_tokens 1024 --temp 0
+CUDA_VISIBLE_DEVICES=0,1,2,3 accelerate launch --num_processes 2 applications.py --eval_mode para_sd --gamma 5 -n 1  -e applications --draft_model codellama-7b --target_model codellama-70b --max_tokens 1024 --temp 0
 ```
 
 
@@ -128,13 +131,25 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 accelerate launch --num_processes 2 applications --
 If you find our work useful your research, please cite our paper:
 
 ```
-@misc{liu2024parallelspeculativedecodingadaptive,
-      title={Parallel Speculative Decoding with Adaptive Draft Length}, 
-      author={Tianyu Liu and Yun Li and Qitan Lv and Kai Liu and Jianchen Zhu and Winston Hu},
-      year={2024},
+@inproceedings{
+liu2025pearl,
+title={{PEARL}: Parallel Speculative Decoding with Adaptive Draft Length},
+author={Tianyu Liu and Yun Li and Qitan Lv and Kai Liu and Jianchen Zhu and Winston Hu and Xiao Sun},
+booktitle={The Thirteenth International Conference on Learning Representations},
+year={2025},
+url={https://openreview.net/forum?id=QOXrVMiHGK}
+}
+
+
+@misc{liu2025pearlparallelspeculativedecoding,
+      title={PEARL: Parallel Speculative Decoding with Adaptive Draft Length}, 
+      author={Tianyu Liu and Yun Li and Qitan Lv and Kai Liu and Jianchen Zhu and Winston Hu and Xiao Sun},
+      year={2025},
       eprint={2408.11850},
       archivePrefix={arXiv},
       primaryClass={cs.CL},
       url={https://arxiv.org/abs/2408.11850}, 
 }
+
+
 ```
