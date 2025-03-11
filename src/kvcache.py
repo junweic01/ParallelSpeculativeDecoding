@@ -22,7 +22,7 @@ class KVCacheModel():
             last_q = self._prob_history[:, -1, :]
         else:
             # return the last token's logits
-            cached_len = self._past_key_values[0][0].shape[2]
+            cached_len = self._past_key_values.get_seq_length()
                 
             last_input_id = input_ids[:, cached_len:]
             if last_input_id.dim() == 1:
@@ -72,14 +72,5 @@ class KVCacheModel():
     
     @torch.no_grad()
     def rollback(self, end_pos : int):
-        past_key_values_trimmed = []
-        assert self._past_key_values
-        for kv in self._past_key_values:
-            k, v = kv
-            k = k[:, :, :end_pos, :]
-            v = v[:, :, :end_pos, :]
-            kv_trimmed = (k, v)
-            past_key_values_trimmed.append(kv_trimmed)
-        
-        self._past_key_values = past_key_values_trimmed
+        self._past_key_values.crop(end_pos)
         self._prob_history = self._prob_history[:, :end_pos, :]
