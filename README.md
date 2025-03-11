@@ -2,7 +2,7 @@
 
 <p align="center">
 | <a href="https://arxiv.org/pdf/2408.11850"><b>Paper </b></a> | 
-<a href="https://pearl-code.github.io/"><b>Blog</b></a> |
+<a href="https://pearl-code.github.io/"><b>Blog</b></a> | <a href="https://zhuanlan.zhihu.com/p/716769091"><b>知乎</b></a> |
 </p>
 
 *News* 🔥
@@ -116,6 +116,10 @@ We have provided a suggested web interface, which you can use by running the fol
 ```shell
 CUDA_VISIBLE_DEVICES=0,1,2,3 accelerate launch --num_processes 2 applications.py --eval_mode para_sd --gamma 5 -n 1  -e applications --draft_model codellama-7b --target_model codellama-70b --max_tokens 1024 --temp 0
 ```
+
+## FAQ
+
+Please refer to the <a href="https://zhuanlan.zhihu.com/p/716769091"><b>知乎</b></a> blog.
 
 
 <div class="columns is-centered has-text-centered">
