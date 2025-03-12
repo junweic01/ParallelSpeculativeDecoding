@@ -47,22 +47,25 @@ def parallel_speculative_decoding(prefix):
     cur_mode = True
     num_acc_token = 0
     input_len = prefix.shape[1]
-
     while prefix.shape[1] < max_tokens:
         prefix_len = prefix.shape[1]
         
         input_ids = prefix.to(device)
         if accelerator.is_main_process:
             x = kv_model.generate(input_ids, args.gamma)
-            prob = kv_model._prob_history[:, prefix_len-args.gamma-1:prefix_len, :vocab_size]
+            prob = kv_model._prob_history[:, prefix_len-args.gamma-1:prefix_len, :vocab_size].to(torch.float32)
             prob[:, 0, 0] = -1
             prob[:, 0, 1:args.gamma*2] = x[:, prefix_len-args.gamma+1:prefix_len+args.gamma]
+            prob = prob.to("cuda:0")
         else:
             x = kv_model.generate(input_ids, 1)
-            prob = kv_model._prob_history[:, prefix_len-args.gamma-1:prefix_len, :vocab_size]
+            prob = kv_model._prob_history[:, prefix_len-args.gamma-1:prefix_len, :vocab_size].to(torch.float32)
+            prob = prob.to("cuda:1")
         
         accelerator.wait_for_everyone()
+        
         all_prob = accelerator.gather(prob)
+        assert all_prob[0, 0, 0] == -1
         draft_ids = all_prob[0, [0], 1:args.gamma*2].int()
         draft_prob = all_prob[[0], 1:, :]
         target_prob = all_prob[[1], 1:, :]
@@ -114,7 +117,7 @@ def parallel_speculative_decoding(prefix):
                 kv_model.rollback(prefix_len - args.gamma +n+1)
         
         yield prefix, num_acc_token
-        
+
         flag = False
         for token in stop_token_list:
             if token in prefix[0, input_len:].tolist():
@@ -154,19 +157,6 @@ def user(user_message, history, session_state):
     pure_history += [[user_message, None]]
     session_state["pure_history"] = pure_history
     return "", history + [[user_message, None]], session_state
-
-def send_and_receive(user_message, history, session_state):
-    msg = None
-    if accelerator.is_main_process:
-        msg = [user_message, history, session_state]
-        accelerator.wait_for_everyone()
-        return user(user_message, history, session_state)
-    else:
-        accelerator.wait_for_everyone()
-        msg = accelerate.utils.gather_object(msg)
-        user_message, history, session_state = msg
-        return user(user_message, history, session_state)
-
 
 def truncate_list(lst, num):
     if num not in lst:
@@ -362,13 +352,14 @@ if accelerator.is_main_process:
         stop_button.click(fn=None, inputs=None, outputs=None, cancels=[send_event,regenerate_event,enter_event])
         
         demo.queue()
-        demo.launch(share=True)
+        demo.launch(share=False)
 else:
     while True:
         copy_ids = torch.zeros((1, PADDING_LENGTH), device=accelerator.device).int()
         accelerator.wait_for_everyone()
         copy_ids = accelerator.gather(copy_ids)
+        assert copy_ids[0, -1] != 0
         input_ids = copy_ids[[0], :copy_ids[0, -1].int()]
-        print(input_ids)
+        
         for _ in parallel_speculative_decoding(input_ids):
-            continue
+            print(_)
