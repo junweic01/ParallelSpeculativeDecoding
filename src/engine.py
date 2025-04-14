@@ -359,60 +359,60 @@ class Decoding(ABC):
             device = self.target_model.device
 
         max_tokens = prefix.shape[1] + self.args.max_tokens
-        
+
         # this flag is used to determine whether to use the strategy 2
         cur_mode = False
 
         while prefix.shape[1] < max_tokens:
             prefix_len = prefix.shape[1]
-            
+
             input_ids = prefix.to(device)
             if self.accelerator.is_main_process:
                 x = model.generate(input_ids, self.args.gamma)
-                prob = model._prob_history[:, prefix_len-self.args.gamma-1:prefix_len, :self.vocab_size]
+                prob = model._prob_history[:, prefix_len-self.args.gamma-2:prefix_len, :self.vocab_size].to(torch.float32)
                 prob[:, 0, 0] = -1
-                prob[:, 0, 1:self.args.gamma*2] = x[:, prefix_len-self.args.gamma+1:prefix_len+self.args.gamma]
+                prob[:, 0, 1:self.args.gamma*2+1] = x[:, prefix_len-self.args.gamma:prefix_len+self.args.gamma]
                 self.draft_forward_times += self.args.gamma
             else:
                 x = model.generate(input_ids, 1)
-                prob = model._prob_history[:, prefix_len-self.args.gamma-1:prefix_len, :self.vocab_size]
+                prob = model._prob_history[:, prefix_len-self.args.gamma-2:prefix_len, :self.vocab_size].to(torch.float32)
                 self.target_forward_times += 1
-            
+
             self.accelerator.wait_for_everyone()
-            
-            all_prob = self.accelerator.gather(prob)
-            
+
+            all_prob = self.accelerator.gather(prob).to(device)
+
             assert all_prob[0, 0, 0] == -1
-            draft_ids = all_prob[0, [0], 1:self.args.gamma*2].int()
+            draft_ids = all_prob[0, [0], 1:self.args.gamma*2+1].int()
             draft_prob = all_prob[[0], 1:, :]
             target_prob = all_prob[[1], 1:, :]
-            
+
             if cur_mode:
-                n = self.args.gamma
-                for i in range(self.args.gamma):
+                n = self.args.gamma + 1
+                for i in range(self.args.gamma + 1):
                     token = draft_ids[:, i]
-                    torch.manual_seed(self.seed + prefix_len - self.args.gamma + i)
+                    torch.manual_seed(self.seed + prefix_len - self.args.gamma-1 + i)
                     r = torch.rand(1, device=device)
                     if r > target_prob[:, i, token] / draft_prob[:, i, token]:
                         n = i
                         break
-                if n == self.args.gamma:
+                if n == self.args.gamma + 1:
                     # accept all guess tokens
                     prefix = torch.cat((input_ids, draft_ids[:, -self.args.gamma:]), dim=1)
                 else:
                     # reject someone, change the mode
-                    assert n < self.args.gamma
+                    assert n < self.args.gamma + 1
                     cur_mode = False
                     t = sample(max_fn(target_prob[:, n, :] - draft_prob[:, n, :]))
-                    
-                    prefix = torch.cat((input_ids[:, :prefix_len-self.args.gamma + n + 1], t), dim=1)
+
+                    prefix = torch.cat((input_ids[:, :prefix_len-self.args.gamma + n], t), dim=1)
                     # rollback both the large model and the small model kv cache
-                    model.rollback(prefix_len - self.args.gamma +n+1)
+                    model.rollback(prefix_len - self.args.gamma +n)
 
             else:
                 prefix = torch.cat((input_ids, draft_ids[:, -self.args.gamma:]), dim=1)
                 cur_mode = True
-            
+
         return prefix
 
     @torch.no_grad()
